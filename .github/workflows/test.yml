@@ -13,25 +13,17 @@ jobs:
   setup:
     runs-on: ubuntu-latest
     outputs:
-      cache-hit: ${{ steps.cache.outputs.cache-hit }}
+      node-modules-cache-hit: ${{ steps.node-cache.outputs.cache-hit }}
     steps:
       - name: 🛎 Checkout repo
         uses: actions/checkout@v4
 
       - name: 🧰 Setup Node.js
+        id: node
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
-
-      - name: 💾 Cache npm dependencies
-        id: cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
 
       - name: 📦 Install dependencies
         run: npm ci
@@ -42,12 +34,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
 
       - run: npm ci
-
       - run: npm run lint > lint-report.txt || true
 
       - uses: actions/upload-artifact@v4
@@ -61,9 +54,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
 
       - run: npm ci
 
@@ -79,9 +74,11 @@ jobs:
       - name: 📈 Add coverage summary to PR
         if: always()
         run: |
+          sudo apt-get install -y jq
           echo '### Test Coverage Summary' >> $GITHUB_STEP_SUMMARY
           if [ -f coverage/coverage-summary.json ]; then
-            cat coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
+            PERCENT=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+            echo "**Line Coverage:** ${PERCENT}%" >> $GITHUB_STEP_SUMMARY
           else
             echo "Coverage summary not found." >> $GITHUB_STEP_SUMMARY
           fi
@@ -92,9 +89,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
 
       - run: npm ci
       - run: npm run build
@@ -105,15 +104,22 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+      security-events: write
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 👈 full history required for Gitleaks
+          fetch-depth: 0 # full history for gitleaks diffing
 
       - name: 🕵️ Scan for secrets using Gitleaks
         uses: gitleaks/gitleaks-action@v2
-        continue-on-error: true # 👈 don't crash the build if Gitleaks fails weirdly
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: "--redact --report-format=sarif --report-path=results.sarif"
+
+      - name: 📊 Upload SARIF to GitHub Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
