@@ -8,7 +8,7 @@ function Square({value, onSquareClick}) {
   );
 }
 
-export default function Board() {
+function Board() {
   const [xIsNext, setXIsNext] = useState(true);
   const [squares, setSquares] = useState(Array(9).fill(null));
 
@@ -75,3 +75,6 @@ function calculateWinner(squares) {
   }
   return null;
 }
+
+export default Board;
+export { calculateWinner,Square };
