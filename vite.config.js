@@ -10,11 +10,13 @@ export default defineConfig({
     setupFiles: './src/setupTests.js',
     coverage: {
       reporter: ['text', 'json', 'html'],
-      exclude: ['node_modules/', 'dist/', 'vite.config.js'],
-      lines: 90,
-      functions: 90,
-      branches: 90,
-      statements: 90,
+      exclude: ['node_modules/', 'dist/', 'vite.config.js', 'eslint.config.js'],
+      thresholds: {
+        statements: 90,
+        branches: 90,
+        functions: 90,
+        lines: 90,
+      },
     },
 
   },
