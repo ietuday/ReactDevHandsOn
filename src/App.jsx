@@ -6,9 +6,11 @@ export default function MyApp(){
       <h1>Counters that update separately</h1>
       <MyButton />
       <MyButton />
+      <MyButton />
     </div>
   );
 }
+
 
 function MyButton(){
   const [count, setCount] = useState(0);
