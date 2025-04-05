@@ -1,4 +1,4 @@
-name: Run Tests, Lint, and Check Coverage
+name: Run Tests, Lint, Build, and Check Coverage
 
 on:
   push:
@@ -7,9 +7,10 @@ on:
     branches: ['**']
 
 jobs:
-  test:
+  setup:
     runs-on: ubuntu-latest
-
+    outputs:
+      cache-hit: ${{ steps.cache.outputs.cache-hit }}
     steps:
       - name: 🛎 Checkout repo
         uses: actions/checkout@v4
@@ -20,17 +21,54 @@ jobs:
           node-version: 20
           cache: 'npm'
 
+      - name: 💾 Cache npm dependencies
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
       - name: 📦 Install dependencies
         run: npm ci
 
-      - name: 🧹 Lint code
+  lint:
+    name: 🧹 Lint Code
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 🧰 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🧽 Run ESLint
         run: npm run lint > lint-report.txt || true
 
-      - name: 📤 Upload lint report
+      - name: 📤 Upload Lint Report
         uses: actions/upload-artifact@v4
         with:
           name: lint-report
           path: lint-report.txt
+
+  test:
+    name: 🧪 Test & Coverage
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 🧰 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 📦 Install dependencies
+        run: npm ci
 
       - name: 🧪 Run tests with coverage
         run: npm run test:coverage -- --coverage.enabled true
@@ -41,3 +79,30 @@ jobs:
         with:
           name: coverage-report
           path: coverage/
+
+      - name: 📈 Add coverage summary to PR
+        if: always()
+        run: |
+          echo '### Test Coverage Summary' >> $GITHUB_STEP_SUMMARY
+          if [ -f coverage/coverage-summary.json ]; then
+            cat coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Coverage summary not found." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  build:
+    name: 🏗️ Build App
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 🧰 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🏗️ Build Project
+        run: npm run build
