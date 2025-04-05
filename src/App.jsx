@@ -1,22 +1,36 @@
-import React, { useState } from 'react';
+import { useState } from "react";
 
-export default function MyApp(){
+export default function Board() {
   return (
-    <div>
-      <h1>Counters that update separately</h1>
-      <MyButton />
-      <MyButton />
-      <MyButton />
-    </div>
+    <>
+      <div className="board-row">
+        <Square />
+        <Square />
+        <Square />
+      </div>
+      <div className="board-row">
+        <Square />
+        <Square />
+        <Square />
+      </div>
+      <div className="board-row">
+        <Square />
+        <Square />
+        <Square />
+      </div>
+    </>
   );
 }
 
+function Square() {
+  const [value, setValue] = useState(null);
 
-function MyButton(){
-  const [count, setCount] = useState(0);
+  const handleClick = () => {
+    setValue('X');
+  }
   return (
-    <button onClick={() => setCount(count + 1)}>
-      Clicked {count} times 
+    <button className="square" onClick={handleClick}>
+      {value}
     </button>
   );
 }
