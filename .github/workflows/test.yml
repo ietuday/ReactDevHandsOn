@@ -5,6 +5,9 @@ on:
     branches: ['**']
   pull_request:
     branches: ['**']
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
 
 jobs:
   setup:
@@ -39,6 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: 🧰 Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -62,6 +66,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: 🧰 Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -71,7 +76,7 @@ jobs:
         run: npm ci
 
       - name: 🧪 Run tests with coverage
-        run: npm run test:coverage -- --coverage.enabled true
+        run: npm run test:coverage -- --coverage.enabled true --coverage.reporter=lcov
 
       - name: 📂 Upload coverage report
         if: always()
@@ -96,6 +101,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: 🧰 Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -106,3 +112,14 @@ jobs:
 
       - name: 🏗️ Build Project
         run: npm run build
+
+  security:
+    name: 🔐 Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🕵️ Scan for secrets
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          config-path: .github/.gitleaks.toml # Optional: custom config
