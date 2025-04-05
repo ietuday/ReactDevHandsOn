@@ -7,6 +7,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: './src/setupTests.js'
+    setupFiles: './src/setupTests.js',
+    coverage: {
+      reporter: ['text', 'json', 'html'], // customize as needed
+      exclude: ['node_modules/', 'dist/', 'vite.config.js'],
+    },
   },
 });
