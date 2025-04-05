@@ -116,10 +116,16 @@ jobs:
   security:
     name: 🔐 Secret Scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
 
-      - name: 🕵️ Scan for secrets
+      - name: 🕵️ Scan for secrets using Gitleaks
         uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          config-path: .github/.gitleaks.toml # Optional: custom config
+          # Uncomment the next line if you're using a custom config file
+          # args: "--config=.github/.gitleaks.toml"
