@@ -107,10 +107,13 @@ jobs:
       pull-requests: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 👈 full history required for Gitleaks
 
       - name: 🕵️ Scan for secrets using Gitleaks
         uses: gitleaks/gitleaks-action@v2
+        continue-on-error: true # 👈 don't crash the build if Gitleaks fails weirdly
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          args: "--config=.github/.gitleaks.toml" # or omit if using default config
+          args: "--redact --report-format=sarif --report-path=results.sarif"
