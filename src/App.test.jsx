@@ -1,6 +1,6 @@
-import Board, { calculateWinner } from './App';
 import { render, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import Game, { calculateWinner } from './App';
 
 describe('calculateWinner', () => {
   test('detects a winner in the first row', () => {
@@ -19,9 +19,9 @@ describe('calculateWinner', () => {
   });
 });
 
-describe('Board component interactions', () => {
+describe('Game component interactions', () => {
   test('clicking on a square shows X or O and toggles turns', () => {
-    const { getAllByRole, getByText } = render(<Board />);
+    const { getAllByRole, getByText } = render(<Game />);
     const squares = getAllByRole('button');
 
     fireEvent.click(squares[0]);
@@ -34,16 +34,16 @@ describe('Board component interactions', () => {
   });
 
   test('does not overwrite a square once clicked', () => {
-    const { getAllByRole } = render(<Board />);
+    const { getAllByRole } = render(<Game />);
     const squares = getAllByRole('button');
 
-    fireEvent.click(squares[0]); // X
-    fireEvent.click(squares[0]); // should do nothing
+    fireEvent.click(squares[0]);
+    fireEvent.click(squares[0]);
     expect(squares[0]).toHaveTextContent('X');
   });
 
   test('displays the winner when game is won', () => {
-    const { getAllByRole, getByText } = render(<Board />);
+    const { getAllByRole, getByText } = render(<Game />);
     const squares = getAllByRole('button');
 
     fireEvent.click(squares[0]); // X
@@ -56,7 +56,7 @@ describe('Board component interactions', () => {
   });
 
   test('does not allow further moves after game is won', () => {
-    const { getAllByRole } = render(<Board />);
+    const { getAllByRole } = render(<Game />);
     const squares = getAllByRole('button');
 
     fireEvent.click(squares[0]); // X
@@ -65,13 +65,36 @@ describe('Board component interactions', () => {
     fireEvent.click(squares[4]); // O
     fireEvent.click(squares[2]); // X wins
 
-    fireEvent.click(squares[5]); // Should be ignored
-    expect(squares[5]).toHaveTextContent(''); // remains empty
+    fireEvent.click(squares[5]); // should be ignored
+    expect(squares[5]).toHaveTextContent('');
+  });
+
+  test('renders 10 squares', () => {
+    const { getAllByRole } = render(<Game />);
+    const squares = getAllByRole('button');
+    expect(squares.length).toBe(10);
   });
 
   test('renders 9 squares', () => {
-    const { getAllByRole } = render(<Board />);
+    const { getAllByRole } = render(<Game />);
+    const squareButtons = getAllByRole('button').filter(btn =>
+      btn.classList.contains('square')
+    );
+    expect(squareButtons.length).toBe(9);
+  });
+  
+
+  test('allows jumping back to previous moves', () => {
+    const { getAllByRole, getByText } = render(<Game />);
     const squares = getAllByRole('button');
-    expect(squares.length).toBe(9);
+
+    fireEvent.click(squares[0]); // X
+    fireEvent.click(squares[1]); // O
+
+    const jumpButton = getByText('Go to move #1');
+    fireEvent.click(jumpButton);
+
+    // Should show "Next player: O" again
+    expect(getByText(/Next player: O/)).toBeInTheDocument();
   });
 });
