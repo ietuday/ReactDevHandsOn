@@ -1,0 +1,125 @@
+name: Run Tests, Lint, Build, and Check Coverage
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      node-modules-cache-hit: ${{ steps.node-cache.outputs.cache-hit }}
+    steps:
+      - name: 🛎 Checkout repo
+        uses: actions/checkout@v4
+
+      - name: 🧰 Setup Node.js
+        id: node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+  lint:
+    name: 🧹 Lint Code
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run lint > lint-report.txt || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: lint-report.txt
+
+  test:
+    name: 🧪 Test & Coverage
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - run: npm ci
+
+      - run: npm run test:coverage -- --coverage.enabled true --coverage.reporter=lcov
+
+      - name: 📂 Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+
+      - name: 📈 Add coverage summary to PR
+        if: always()
+        run: |
+          sudo apt-get install -y jq
+          echo '### Test Coverage Summary' >> $GITHUB_STEP_SUMMARY
+          if [ -f coverage/coverage-summary.json ]; then
+            PERCENT=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+            echo "**Line Coverage:** ${PERCENT}%" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Coverage summary not found." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  build:
+    name: 🏗️ Build App
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run build
+
+  security:
+    name: 🔐 Secret Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history for gitleaks diffing
+
+      - name: 🕵️ Scan for secrets using Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: "--redact --report-format=sarif --report-path=results.sarif"
+
+      - name: 📊 Upload SARIF to GitHub Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
