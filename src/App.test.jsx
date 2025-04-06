@@ -1,100 +1,48 @@
-import { render, fireEvent } from '@testing-library/react';
-import '@testing-library/jest-dom';
-import Game, { calculateWinner } from './App';
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import App, { FilterableProductTable } from './App';
 
-describe('calculateWinner', () => {
-  test('detects a winner in the first row', () => {
-    const board = ['X', 'X', 'X', null, null, null, null, null, null];
-    expect(calculateWinner(board)).toBe('X');
-  });
-
-  test('detects a diagonal win for O', () => {
-    const board = ['O', null, null, null, 'O', null, null, null, 'O'];
-    expect(calculateWinner(board)).toBe('O');
-  });
-
-  test('returns null if no winner', () => {
-    const board = ['X', 'O', 'X', 'O', 'O', 'X', 'X', 'X', 'O'];
-    expect(calculateWinner(board)).toBe(null);
-  });
+beforeEach(() => {
+  render(<App />);
 });
 
-describe('Game component interactions', () => {
-  test('clicking on a square shows X or O and toggles turns', () => {
-    const { getAllByRole, getByText } = render(<Game />);
-    const squares = getAllByRole('button');
+test('renders product table with all products initially', () => {
+  expect(screen.getByText('Apple')).toBeInTheDocument();
+  expect(screen.getByText('Pumpkin')).toBeInTheDocument();
+});
 
-    fireEvent.click(squares[0]);
-    expect(squares[0]).toHaveTextContent('X');
-    expect(getByText(/Next player: O/)).toBeInTheDocument();
-
-    fireEvent.click(squares[1]);
-    expect(squares[1]).toHaveTextContent('O');
-    expect(getByText(/Next player: X/)).toBeInTheDocument();
+test('filters products by text input', () => {
+  fireEvent.change(screen.getByPlaceholderText(/search/i), {
+    target: { value: 'pea' }
   });
+  expect(screen.getByText('Peas')).toBeInTheDocument();
+  expect(screen.queryByText('Apple')).not.toBeInTheDocument();
+});
 
-  test('does not overwrite a square once clicked', () => {
-    const { getAllByRole } = render(<Game />);
-    const squares = getAllByRole('button');
+test('filters only in-stock products when checkbox is checked', () => {
+  fireEvent.click(screen.getByLabelText(/only show products in stock/i));
+  expect(screen.queryByText('Pumpkin')).not.toBeInTheDocument(); // out of stock
+  expect(screen.getByText('Peas')).toBeInTheDocument(); // in stock
+});
 
-    fireEvent.click(squares[0]);
-    fireEvent.click(squares[0]);
-    expect(squares[0]).toHaveTextContent('X');
+test('filters by text + stock together', () => {
+  fireEvent.change(screen.getByPlaceholderText(/search/i), {
+    target: { value: 'a' } // matches 'Apple' and 'Dragonfruit'
   });
+  fireEvent.click(screen.getByLabelText(/only show products in stock/i));
 
-  test('displays the winner when game is won', () => {
-    const { getAllByRole, getByText } = render(<Game />);
-    const squares = getAllByRole('button');
+  expect(screen.getByText('Apple')).toBeInTheDocument(); // in-stock
+  expect(screen.getByText('Dragonfruit')).toBeInTheDocument(); // in-stock
+  expect(screen.queryByText('Passionfruit')).not.toBeInTheDocument(); // out-of-stock
+});
 
-    fireEvent.click(squares[0]); // X
-    fireEvent.click(squares[3]); // O
-    fireEvent.click(squares[1]); // X
-    fireEvent.click(squares[4]); // O
-    fireEvent.click(squares[2]); // X wins
 
-    expect(getByText(/Winner: X/)).toBeInTheDocument();
-  });
+test('renders category headers correctly', () => {
+  expect(screen.getByText('Fruits')).toBeInTheDocument();
+  expect(screen.getByText('Vegetables')).toBeInTheDocument();
+});
 
-  test('does not allow further moves after game is won', () => {
-    const { getAllByRole } = render(<Game />);
-    const squares = getAllByRole('button');
-
-    fireEvent.click(squares[0]); // X
-    fireEvent.click(squares[3]); // O
-    fireEvent.click(squares[1]); // X
-    fireEvent.click(squares[4]); // O
-    fireEvent.click(squares[2]); // X wins
-
-    fireEvent.click(squares[5]); // should be ignored
-    expect(squares[5]).toHaveTextContent('');
-  });
-
-  test('renders 10 squares', () => {
-    const { getAllByRole } = render(<Game />);
-    const squares = getAllByRole('button');
-    expect(squares.length).toBe(10);
-  });
-
-  test('renders 9 squares', () => {
-    const { getAllByRole } = render(<Game />);
-    const squareButtons = getAllByRole('button').filter(btn =>
-      btn.classList.contains('square')
-    );
-    expect(squareButtons.length).toBe(9);
-  });
-  
-
-  test('allows jumping back to previous moves', () => {
-    const { getAllByRole, getByText } = render(<Game />);
-    const squares = getAllByRole('button');
-
-    fireEvent.click(squares[0]); // X
-    fireEvent.click(squares[1]); // O
-
-    const jumpButton = getByText('Go to move #1');
-    fireEvent.click(jumpButton);
-
-    // Should show "Next player: O" again
-    expect(getByText(/Next player: O/)).toBeInTheDocument();
-  });
+test('renders out-of-stock product names in red', () => {
+  const passionfruit = screen.getByText('Passionfruit');
+  expect(passionfruit).toHaveStyle({ color: 'rgb(255, 0, 0)' }); // the actual computed style
 });
