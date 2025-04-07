@@ -1,24 +1,24 @@
-name: Auto Request Reviewer
+name: PR Copilot Reminder
 
 on:
   pull_request:
     types: [opened]
 
 jobs:
-  reviewer:
+  copilot-reminder:
     runs-on: ubuntu-latest
     steps:
-      - name: Request Review from Copilot
+      - name: Comment reminder for Copilot review
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const { owner, repo } = context.repo;
-            const pull_number = context.payload.pull_request.number;
+            const issue_number = context.payload.pull_request.number;
 
-            await github.rest.pulls.requestReviewers({
+            await github.rest.issues.createComment({
               owner,
               repo,
-              pull_number,
-              reviewers: ['github-copilot'] // Change if needed
+              issue_number,
+              body: "🤖 Heads-up! GitHub Copilot can't be auto-requested via Actions yet. Please [manually request a Copilot review](https://docs.github.com/en/copilot/using-github-copilot/code-review/using-copilot-code-review)."
             });
