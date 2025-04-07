@@ -14,9 +14,12 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const prAuthor = context.payload.pull_request.user.login;
-            await github.issues.addAssignees({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+
+            await github.rest.issues.addAssignees({
+              owner,
+              repo,
+              issue_number,
               assignees: [prAuthor]
             });
